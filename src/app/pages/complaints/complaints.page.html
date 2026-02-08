@@ -1,0 +1,112 @@
+<section class="flex flex-col gap-8">
+  <header class="space-y-2">
+    <p class="text-xs uppercase tracking-[0.3em] text-slate-400">Student Dashboard</p>
+    <h1 class="text-3xl font-semibold text-white">Submit a complaint</h1>
+    <p class="text-sm text-slate-400">Share an issue and track its progress.</p>
+  </header>
+
+  <div class="grid gap-6 lg:grid-cols-[1.1fr_1.4fr]">
+    <form
+      class="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-lg"
+      [formGroup]="form"
+      (ngSubmit)="submitComplaint()"
+    >
+      <div class="space-y-2">
+        <label class="text-sm font-medium text-slate-200" for="description"
+          >Complaint description</label
+        >
+        <textarea
+          id="description"
+          rows="6"
+          formControlName="description"
+          class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none ring-0 transition focus:border-slate-400"
+          placeholder="Describe the issue and include key details."
+        ></textarea>
+        @if (form.controls.description.touched && form.controls.description.invalid) {
+          <p class="text-xs text-rose-300">Description must be at least 10 characters.</p>
+        }
+      </div>
+
+      <div class="mt-6 space-y-3">
+        @if (submitError()) {
+          <div
+            class="rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-200"
+            aria-live="polite"
+          >
+            {{ submitError() }}
+          </div>
+        }
+        @if (submitSuccess()) {
+          <div
+            class="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200"
+            aria-live="polite"
+          >
+            Complaint submitted. You can track it on the right.
+          </div>
+        }
+        <button
+          type="submit"
+          [disabled]="submitLoading()"
+          class="flex w-full items-center justify-center rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          @if (submitLoading()) {
+            <span>Submitting...</span>
+          } @else {
+            <span>Submit complaint</span>
+          }
+        </button>
+      </div>
+    </form>
+
+    <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-lg">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-white">My complaints</h2>
+        <button
+          type="button"
+          class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 hover:text-slate-200"
+          (click)="loadComplaints()"
+        >
+          Refresh
+        </button>
+      </div>
+
+      <div class="mt-4 space-y-4">
+        @if (listLoading()) {
+          <p class="text-sm text-slate-400">Loading complaints...</p>
+        } @else {
+          @if (listError()) {
+            <div
+              class="rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-200"
+              aria-live="polite"
+            >
+              {{ listError() }}
+            </div>
+          } @else {
+            @if (complaints().length === 0) {
+              <p class="text-sm text-slate-400">No complaints submitted yet.</p>
+            } @else {
+              <div class="space-y-3">
+                @for (complaint of complaints(); track complaint.id) {
+                  <article class="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
+                    <div class="flex items-start justify-between gap-4">
+                      <p class="text-sm text-slate-100">{{ complaint.description }}</p>
+                      <span
+                        class="rounded-full border px-2 py-0.5 text-xs font-semibold"
+                        [class]="statusClass(complaint.status)"
+                      >
+                        {{ complaint.status }}
+                      </span>
+                    </div>
+                    <p class="mt-2 text-xs text-slate-400">
+                      {{ complaint.createdAt | date: 'medium' }}
+                    </p>
+                  </article>
+                }
+              </div>
+            }
+          }
+        }
+      </div>
+    </div>
+  </div>
+</section>

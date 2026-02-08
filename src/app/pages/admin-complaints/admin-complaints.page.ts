@@ -1,0 +1,93 @@
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  OnInit,
+  inject,
+  signal,
+} from '@angular/core';
+import { DatePipe } from '@angular/common';
+import { finalize } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ComplaintService } from '../../services/complaint.service';
+import { Complaint } from '../../models';
+
+@Component({
+  selector: 'app-admin-complaints-page',
+  imports: [DatePipe],
+  templateUrl: './admin-complaints.page.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class AdminComplaintsPage implements OnInit {
+  private readonly complaintService = inject(ComplaintService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  readonly complaints = signal<Complaint[]>([]);
+  readonly listLoading = signal(false);
+  readonly listError = signal<string | null>(null);
+  readonly actionError = signal<string | null>(null);
+  readonly busyIds = signal<string[]>([]);
+
+  ngOnInit(): void {
+    this.loadComplaints();
+  }
+
+  loadComplaints(): void {
+    this.listLoading.set(true);
+    this.listError.set(null);
+
+    this.complaintService
+      .getComplaints()
+      .pipe(
+        finalize(() => this.listLoading.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (complaints) => this.complaints.set(complaints),
+        error: (err: Error) => this.listError.set(err.message || 'Failed to load complaints.'),
+      });
+  }
+
+  updateStatus(complaint: Complaint, status: 'approved' | 'rejected'): void {
+    if (this.busyIds().includes(complaint.id)) {
+      return;
+    }
+
+    this.actionError.set(null);
+    this.busyIds.update((ids) => [...ids, complaint.id]);
+
+    this.complaintService
+      .updateComplaint(complaint.id, { status })
+      .pipe(
+        finalize(() => {
+          this.busyIds.update((ids) => ids.filter((id) => id !== complaint.id));
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: () => {
+          this.complaints.update((items) =>
+            items.map((item) => (item.id === complaint.id ? { ...item, status } : item)),
+          );
+        },
+        error: (err: Error) => {
+          this.actionError.set(err.message || 'Update failed.');
+        },
+      });
+  }
+
+  isBusy(id: string): boolean {
+    return this.busyIds().includes(id);
+  }
+
+  statusClass(status: Complaint['status']): string {
+    switch (status) {
+      case 'approved':
+        return 'bg-emerald-400/20 text-emerald-200 border-emerald-400/40';
+      case 'rejected':
+        return 'bg-rose-400/20 text-rose-200 border-rose-400/40';
+      default:
+        return 'bg-amber-400/20 text-amber-200 border-amber-400/40';
+    }
+  }
+}
