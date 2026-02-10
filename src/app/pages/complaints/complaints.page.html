@@ -83,7 +83,7 @@
             </div>
           } @else {
             @if (complaints().length === 0) {
-              <p class="text-sm text-slate-400">No complaints submitted yet.</p>
+              <p class="text-sm text-slate-400">No complaints found.</p>
             } @else {
               <div class="space-y-3">
                 @for (complaint of complaints(); track complaint.id) {

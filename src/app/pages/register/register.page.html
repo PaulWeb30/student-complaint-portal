@@ -26,6 +26,34 @@
       </div>
 
       <div class="space-y-2">
+        <label class="text-sm font-medium text-slate-200" for="name">Name</label>
+        <input
+          id="name"
+          type="text"
+          formControlName="name"
+          class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none ring-0 transition focus:border-slate-400"
+          placeholder="Your full name"
+        />
+        @if (form.controls.name.touched && form.controls.name.invalid) {
+          <p class="text-xs text-rose-300">Name is required.</p>
+        }
+      </div>
+
+      <div class="space-y-2">
+        <label class="text-sm font-medium text-slate-200" for="username">Username</label>
+        <input
+          id="username"
+          type="text"
+          formControlName="username"
+          class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none ring-0 transition focus:border-slate-400"
+          placeholder="Choose a username"
+        />
+        @if (form.controls.username.touched && form.controls.username.invalid) {
+          <p class="text-xs text-rose-300">Username is required.</p>
+        }
+      </div>
+
+      <div class="space-y-2">
         <label class="text-sm font-medium text-slate-200" for="password">Password</label>
         <input
           id="password"
