@@ -3,19 +3,26 @@ import {
   Component,
   DestroyRef,
   OnInit,
+  computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DatePipe } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ComplaintService } from '../../services/complaint.service';
 import { Complaint } from '../../models';
+import {
+  ComplaintStatusFilterComponent,
+  StatusFilter,
+} from '../../components/complaint-status-filter/complaint-status-filter.component';
 
 @Component({
   selector: 'app-complaints-page',
-  imports: [ReactiveFormsModule, DatePipe],
+  imports: [ReactiveFormsModule, DatePipe, ComplaintStatusFilterComponent],
   templateUrl: './complaints.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -23,8 +30,19 @@ export class ComplaintsPage implements OnInit {
   private readonly complaintService = inject(ComplaintService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   readonly complaints = signal<Complaint[]>([]);
+  readonly statusFilter = signal<StatusFilter>('all');
+  readonly filteredComplaints = computed(() => {
+    const filter = this.statusFilter();
+    const complaints = this.complaints();
+    if (filter === 'all') {
+      return complaints;
+    }
+    return complaints.filter((complaint) => complaint.status === filter);
+  });
   readonly listLoading = signal(false);
   readonly listError = signal<string | null>(null);
   readonly submitLoading = signal(false);
@@ -35,22 +53,50 @@ export class ComplaintsPage implements OnInit {
     description: ['', [Validators.required, Validators.minLength(10)]],
   });
 
+  constructor() {
+    effect(() => {
+      const filter = this.statusFilter();
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: filter === 'all' ? {} : { status: filter },
+        queryParamsHandling: 'merge',
+      });
+    });
+  }
+
   ngOnInit(): void {
+    this.route.queryParams.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      const status = params['status'];
+      if (status === 'pending' || status === 'approved' || status === 'rejected') {
+        this.statusFilter.set(status);
+      } else if (!params['status']) {
+        this.statusFilter.set('all');
+      }
+    });
     this.loadComplaints();
+  }
+
+  setStatusFilter(filter: StatusFilter): void {
+    if (typeof filter === 'string') {
+      this.statusFilter.set(filter);
+      this.loadComplaints();
+    }
   }
 
   loadComplaints(): void {
     this.listLoading.set(true);
     this.listError.set(null);
 
+    const filter = this.statusFilter();
+    const status = filter === 'all' ? undefined : (filter as Exclude<StatusFilter, 'all'>);
     this.complaintService
-      .getComplaints()
+      .getComplaints(status)
       .pipe(
         finalize(() => this.listLoading.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: (complaints) => this.complaints.set(complaints),
+        next: (complaints) => this.complaints.set(complaints ?? []),
         error: (err: Error) => this.listError.set(err.message || 'Failed to load complaints.'),
       });
   }

@@ -1,56 +1,63 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { tap } from 'rxjs';
+import { Observable, catchError, finalize, of, shareReplay, switchMap, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { AuthResponse, LoginRequest, RegisterRequest, User } from '../models';
-
-const TOKEN_KEY = 'scp_token';
-const USER_KEY = 'scp_user';
+import { LoginRequest, RegisterRequest, User } from '../models';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
-  private readonly tokenSignal = signal<string | null>(this.loadToken());
-  readonly user = signal<User | null>(this.loadUser());
-  readonly isAuthenticated = computed(() => !!this.tokenSignal());
+  private currentUserRequest: Observable<User | null> | null = null;
+  readonly user = signal<User | null>(null);
+  readonly isAuthenticated = computed(() => !!this.user());
   readonly isAdmin = computed(() => this.user()?.role === 'admin');
 
   login(payload: LoginRequest) {
     return this.http
-      .post<AuthResponse>(`${environment.apiBaseUrl}/auth/login`, payload)
-      .pipe(tap((response) => this.setSession(response)));
+      .post<void>(`${environment.apiBaseUrl}/auth/login`, payload)
+      .pipe(switchMap(() => this.loadCurrentUser()));
   }
 
   register(payload: RegisterRequest) {
     return this.http
-      .post<AuthResponse>(`${environment.apiBaseUrl}/auth/register`, payload)
-      .pipe(tap((response) => this.setSession(response)));
+      .post<void>(`${environment.apiBaseUrl}/auth/register`, payload)
+      .pipe(switchMap(() => this.loadCurrentUser()));
   }
 
-  logout(): void {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-    this.tokenSignal.set(null);
+  logout() {
+    return this.http.post<void>(`${environment.apiBaseUrl}/auth/logout`, {}).pipe(
+      finalize(() => {
+        this.resetSession();
+      }),
+    );
+  }
+
+  loadCurrentUser() {
+    const existingUser = this.user();
+    if (existingUser) {
+      return of(existingUser);
+    }
+
+    if (this.currentUserRequest) {
+      return this.currentUserRequest;
+    }
+
+    this.currentUserRequest = this.http.get<User>(`${environment.apiBaseUrl}/users/me`).pipe(
+      tap((user) => this.user.set(user)),
+      catchError(() => {
+        this.resetSession();
+        return of(null);
+      }),
+      finalize(() => {
+        this.currentUserRequest = null;
+      }),
+      shareReplay(1),
+    );
+
+    return this.currentUserRequest;
+  }
+
+  resetSession(): void {
     this.user.set(null);
-  }
-
-  token(): string | null {
-    return this.tokenSignal();
-  }
-
-  private setSession(response: AuthResponse): void {
-    localStorage.setItem(TOKEN_KEY, response.token);
-    localStorage.setItem(USER_KEY, JSON.stringify(response.user));
-    this.tokenSignal.set(response.token);
-    this.user.set(response.user);
-  }
-
-  private loadToken(): string | null {
-    return localStorage.getItem(TOKEN_KEY);
-  }
-
-  private loadUser(): User | null {
-    const raw = localStorage.getItem(USER_KEY);
-    return raw ? (JSON.parse(raw) as User) : null;
   }
 }

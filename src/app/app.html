@@ -38,10 +38,17 @@
       <div class="flex items-center gap-3">
         @if (isAuthenticated()) {
           <div class="hidden items-center gap-2 text-xs text-slate-400 sm:flex">
+            <span
+              class="flex h-7 w-7 items-center justify-center rounded-full border border-emerald-400/40 bg-emerald-400/10 text-[11px] font-semibold text-emerald-200"
+            >
+              {{
+                (user()?.name || user()?.username || user()?.email || '?').slice(0, 1).toUpperCase()
+              }}
+            </span>
             <span class="rounded-full border border-slate-800 px-2 py-0.5">
               {{ user()?.role }}
             </span>
-            <span>{{ user()?.email }}</span>
+            <span>{{ user()?.username || user()?.email }}</span>
           </div>
           <button
             type="button"

@@ -4,10 +4,11 @@ import { HttpErrorResponse } from '@angular/common/http';
 @Injectable({ providedIn: 'root' })
 export class ApiErrorService {
   handle(error: HttpErrorResponse): string {
-    if (error.error && typeof error.error === 'object' && 'message' in error.error) {
-      const message = (error.error as { message?: string }).message;
-      if (message) {
-        return message;
+    const responseMessage = this.extractMessage(error);
+    if (responseMessage) {
+      const sanitized = this.stripUrls(responseMessage);
+      if (sanitized) {
+        return sanitized;
       }
     }
 
@@ -19,6 +20,36 @@ export class ApiErrorService {
       return 'Server error. Please try again later.';
     }
 
-    return error.message || 'Request failed.';
+    if (error.statusText) {
+      return error.statusText;
+    }
+
+    if (error.status) {
+      return `Request failed (${error.status}).`;
+    }
+
+    return 'Request failed.';
+  }
+
+  private stripUrls(text: string): string {
+    return text
+      .replace(/https?:\/\/\S+/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private extractMessage(error: HttpErrorResponse): string | null {
+    if (typeof error.error === 'string') {
+      return error.error;
+    }
+
+    if (error.error && typeof error.error === 'object' && 'message' in error.error) {
+      const message = (error.error as { message?: string }).message;
+      if (message) {
+        return message;
+      }
+    }
+
+    return null;
   }
 }

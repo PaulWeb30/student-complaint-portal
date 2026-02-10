@@ -59,15 +59,21 @@
     </form>
 
     <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 shadow-lg">
-      <div class="flex items-center justify-between">
+      <div class="flex flex-wrap items-center justify-between gap-3">
         <h2 class="text-lg font-semibold text-white">My complaints</h2>
-        <button
-          type="button"
-          class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 hover:text-slate-200"
-          (click)="loadComplaints()"
-        >
-          Refresh
-        </button>
+        <div class="flex flex-wrap items-center gap-3">
+          <app-complaint-status-filter
+            [selected]="statusFilter()"
+            (change)="setStatusFilter($event)"
+          />
+          <button
+            type="button"
+            class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 hover:text-slate-200"
+            (click)="loadComplaints()"
+          >
+            Refresh
+          </button>
+        </div>
       </div>
 
       <div class="mt-4 space-y-4">
@@ -82,11 +88,11 @@
               {{ listError() }}
             </div>
           } @else {
-            @if (complaints().length === 0) {
+            @if (filteredComplaints().length === 0) {
               <p class="text-sm text-slate-400">No complaints found.</p>
             } @else {
               <div class="space-y-3">
-                @for (complaint of complaints(); track complaint.id) {
+                @for (complaint of filteredComplaints(); track complaint.id) {
                   <article class="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
                     <div class="flex items-start justify-between gap-4">
                       <p class="text-sm text-slate-100">{{ complaint.description }}</p>
