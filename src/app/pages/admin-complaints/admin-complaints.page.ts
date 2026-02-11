@@ -14,6 +14,7 @@ import { finalize } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ComplaintService } from '../../services/complaint.service';
 import { Complaint } from '../../models';
+import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
 import {
   ComplaintStatusFilterComponent,
   StatusFilter,
@@ -21,7 +22,7 @@ import {
 
 @Component({
   selector: 'app-admin-complaints-page',
-  imports: [DatePipe, ComplaintStatusFilterComponent],
+  imports: [DatePipe, ComplaintStatusFilterComponent, ConfirmDialogComponent],
   templateUrl: './admin-complaints.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -45,6 +46,8 @@ export class AdminComplaintsPage implements OnInit {
   readonly listError = signal<string | null>(null);
   readonly actionError = signal<string | null>(null);
   readonly busyIds = signal<string[]>([]);
+  readonly deleteBusyIds = signal<string[]>([]);
+  readonly pendingDelete = signal<Complaint | null>(null);
 
   constructor() {
     effect(() => {
@@ -122,6 +125,50 @@ export class AdminComplaintsPage implements OnInit {
           this.actionError.set(err.message || 'Update failed.');
         },
       });
+  }
+
+  requestDelete(complaint: Complaint): void {
+    if (this.deleteBusyIds().includes(complaint.id)) {
+      return;
+    }
+
+    this.pendingDelete.set(complaint);
+  }
+
+  confirmDelete(): void {
+    const complaint = this.pendingDelete();
+    if (!complaint || this.deleteBusyIds().includes(complaint.id)) {
+      return;
+    }
+
+    this.actionError.set(null);
+    this.deleteBusyIds.update((ids) => [...ids, complaint.id]);
+
+    this.complaintService
+      .deleteComplaint(complaint.id)
+      .pipe(
+        finalize(() => {
+          this.deleteBusyIds.update((ids) => ids.filter((id) => id !== complaint.id));
+          this.pendingDelete.set(null);
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: () => {
+          this.complaints.update((items) => items.filter((item) => item.id !== complaint.id));
+        },
+        error: (err: Error) => {
+          this.actionError.set(err.message || 'Delete failed.');
+        },
+      });
+  }
+
+  cancelDelete(): void {
+    this.pendingDelete.set(null);
+  }
+
+  isDeleting(id: string): boolean {
+    return this.deleteBusyIds().includes(id);
   }
 
   isBusy(id: string): boolean {

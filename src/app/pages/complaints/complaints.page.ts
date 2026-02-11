@@ -15,6 +15,8 @@ import { finalize } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ComplaintService } from '../../services/complaint.service';
 import { Complaint } from '../../models';
+import { AuthService } from '../../services/auth.service';
+import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
 import {
   ComplaintStatusFilterComponent,
   StatusFilter,
@@ -22,12 +24,13 @@ import {
 
 @Component({
   selector: 'app-complaints-page',
-  imports: [ReactiveFormsModule, DatePipe, ComplaintStatusFilterComponent],
+  imports: [ReactiveFormsModule, DatePipe, ComplaintStatusFilterComponent, ConfirmDialogComponent],
   templateUrl: './complaints.page.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ComplaintsPage implements OnInit {
   private readonly complaintService = inject(ComplaintService);
+  private readonly auth = inject(AuthService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
@@ -45,6 +48,9 @@ export class ComplaintsPage implements OnInit {
   });
   readonly listLoading = signal(false);
   readonly listError = signal<string | null>(null);
+  readonly actionError = signal<string | null>(null);
+  readonly deleteBusyIds = signal<string[]>([]);
+  readonly pendingDelete = signal<Complaint | null>(null);
   readonly submitLoading = signal(false);
   readonly submitError = signal<string | null>(null);
   readonly submitSuccess = signal(false);
@@ -86,6 +92,7 @@ export class ComplaintsPage implements OnInit {
   loadComplaints(): void {
     this.listLoading.set(true);
     this.listError.set(null);
+    this.actionError.set(null);
 
     const filter = this.statusFilter();
     const status = filter === 'all' ? undefined : (filter as Exclude<StatusFilter, 'all'>);
@@ -99,6 +106,56 @@ export class ComplaintsPage implements OnInit {
         next: (complaints) => this.complaints.set(complaints ?? []),
         error: (err: Error) => this.listError.set(err.message || 'Failed to load complaints.'),
       });
+  }
+
+  requestDelete(complaint: Complaint): void {
+    if (this.deleteBusyIds().includes(complaint.id) || !this.canDeleteComplaint(complaint)) {
+      return;
+    }
+
+    this.pendingDelete.set(complaint);
+  }
+
+  confirmDelete(): void {
+    const complaint = this.pendingDelete();
+    if (!complaint || this.deleteBusyIds().includes(complaint.id)) {
+      return;
+    }
+
+    this.actionError.set(null);
+    this.deleteBusyIds.update((ids) => [...ids, complaint.id]);
+
+    this.complaintService
+      .deleteComplaint(complaint.id)
+      .pipe(
+        finalize(() => {
+          this.deleteBusyIds.update((ids) => ids.filter((id) => id !== complaint.id));
+          this.pendingDelete.set(null);
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: () => {
+          this.complaints.update((items) => items.filter((item) => item.id !== complaint.id));
+        },
+        error: (err: Error) => this.actionError.set(err.message || 'Delete failed.'),
+      });
+  }
+
+  cancelDelete(): void {
+    this.pendingDelete.set(null);
+  }
+
+  canDeleteComplaint(complaint: Complaint): boolean {
+    const user = this.auth.user();
+    if (!user) {
+      return false;
+    }
+    return this.auth.isAdmin() || complaint.userId === user.id;
+  }
+
+  isDeleting(id: string): boolean {
+    return this.deleteBusyIds().includes(id);
   }
 
   submitComplaint(): void {

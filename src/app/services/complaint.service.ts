@@ -37,4 +37,8 @@ export class ComplaintService {
   updateComplaint(id: string, payload: UpdateComplaintRequest) {
     return this.http.put<Complaint>(`${environment.apiBaseUrl}/complaints/${id}`, payload);
   }
+
+  deleteComplaint(id: string) {
+    return this.http.delete<void>(`${environment.apiBaseUrl}/complaints/${id}`);
+  }
 }

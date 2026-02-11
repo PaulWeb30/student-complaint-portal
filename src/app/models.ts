@@ -25,6 +25,11 @@ export interface RegisterRequest {
   password: string;
 }
 
+export interface UpdateProfileRequest {
+  name: string;
+  username: string;
+}
+
 export type ComplaintStatus = 'pending' | 'approved' | 'rejected';
 
 export interface Complaint {

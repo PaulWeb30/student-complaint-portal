@@ -2,7 +2,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, finalize, of, shareReplay, switchMap, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { LoginRequest, RegisterRequest, User } from '../models';
+import { LoginRequest, RegisterRequest, UpdateProfileRequest, User } from '../models';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -55,6 +55,12 @@ export class AuthService {
     );
 
     return this.currentUserRequest;
+  }
+
+  updateProfile(payload: UpdateProfileRequest) {
+    return this.http
+      .put<User>(`${environment.apiBaseUrl}/users/me`, payload)
+      .pipe(tap((user) => this.user.set(user)));
   }
 
   resetSession(): void {
