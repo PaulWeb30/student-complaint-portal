@@ -24,6 +24,14 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/complaints/complaints.page').then((m) => m.ComplaintsPage),
   },
   {
+    path: 'community',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/community-complaints/community-complaints.page').then(
+        (m) => m.CommunityComplaintsPage,
+      ),
+  },
+  {
     path: 'profile',
     canActivate: [authGuard],
     loadComponent: () => import('./pages/profile/profile.page').then((m) => m.ProfilePage),

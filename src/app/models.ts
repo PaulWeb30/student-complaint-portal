@@ -39,6 +39,7 @@ export interface Complaint {
   createdAt: string;
   userId: string;
   comments?: ComplaintComment[];
+  likeCount?: number;
 }
 
 export interface ComplaintComment {

@@ -16,6 +16,9 @@ export class ComplaintService {
     if (!status || status === 'all') {
       return this.http.get<Complaint[]>(`${environment.apiBaseUrl}/complaints`);
     }
+    if (status === 'approved') {
+      return this.http.get<Complaint[]>(`${environment.apiBaseUrl}/complaints/approved`);
+    }
     return this.http.get<Complaint[]>(`${environment.apiBaseUrl}/complaints`, {
       params: { status },
     });
@@ -36,6 +39,14 @@ export class ComplaintService {
 
   updateComplaint(id: string, payload: UpdateComplaintRequest) {
     return this.http.put<Complaint>(`${environment.apiBaseUrl}/complaints/${id}`, payload);
+  }
+
+  likeComplaint(id: string) {
+    return this.http.post<void>(`${environment.apiBaseUrl}/complaints/${id}/like`, {});
+  }
+
+  unlikeComplaint(id: string) {
+    return this.http.delete<void>(`${environment.apiBaseUrl}/complaints/${id}/like`);
   }
 
   deleteComplaint(id: string) {
