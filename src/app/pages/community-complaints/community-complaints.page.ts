@@ -46,7 +46,7 @@ export class CommunityComplaintsPage implements OnInit {
     this.listError.set(null);
 
     this.complaintService
-      .getComplaints('approved')
+      .getCommunityApprovedComplaints()
       .pipe(
         finalize(() => this.listLoading.set(false)),
         takeUntilDestroyed(this.destroyRef),

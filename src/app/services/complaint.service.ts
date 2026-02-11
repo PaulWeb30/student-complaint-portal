@@ -16,12 +16,13 @@ export class ComplaintService {
     if (!status || status === 'all') {
       return this.http.get<Complaint[]>(`${environment.apiBaseUrl}/complaints`);
     }
-    if (status === 'approved') {
-      return this.http.get<Complaint[]>(`${environment.apiBaseUrl}/complaints/approved`);
-    }
     return this.http.get<Complaint[]>(`${environment.apiBaseUrl}/complaints`, {
       params: { status },
     });
+  }
+
+  getCommunityApprovedComplaints() {
+    return this.http.get<Complaint[]>(`${environment.apiBaseUrl}/complaints/approved`);
   }
 
   getAdminComplaints(status?: ComplaintStatus | 'all') {
