@@ -54,6 +54,7 @@ export class ComplaintsPage implements OnInit {
   readonly submitLoading = signal(false);
   readonly submitError = signal<string | null>(null);
   readonly submitSuccess = signal(false);
+  readonly commentsOpen = signal<Record<string, boolean>>({});
 
   readonly form = this.fb.nonNullable.group({
     description: ['', [Validators.required, Validators.minLength(10)]],
@@ -195,5 +196,17 @@ export class ComplaintsPage implements OnInit {
       default:
         return 'bg-amber-400/20 text-amber-200 border-amber-400/40';
     }
+  }
+
+  toggleComments(id: string): void {
+    this.commentsOpen.update((state) => ({ ...state, [id]: !state[id] }));
+  }
+
+  areCommentsOpen(id: string): boolean {
+    return !!this.commentsOpen()[id];
+  }
+
+  commentsCount(complaint: Complaint): number {
+    return complaint.comments?.length ?? 0;
   }
 }

@@ -55,7 +55,6 @@
                     <div class="space-y-2">
                       <p class="text-sm text-slate-100">{{ complaint.description }}</p>
                       <div class="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-                        <span>Student: {{ complaint.userId }}</span>
                         <span>{{ complaint.createdAt | date: 'medium' }}</span>
                       </div>
                     </div>
@@ -93,6 +92,67 @@
                         X
                       </button>
                     </div>
+                  </div>
+                  <div class="mt-4 space-y-3 border-t border-slate-800 pt-4">
+                    <div class="space-y-2">
+                      <label
+                        class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400"
+                        [attr.for]="'admin-comment-' + complaint.id"
+                        >Admin comment</label
+                      >
+                      <textarea
+                        rows="3"
+                        class="w-full rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-slate-500"
+                        [id]="'admin-comment-' + complaint.id"
+                        [value]="commentDraft(complaint.id)"
+                        (input)="setCommentDraft(complaint.id, $any($event.target).value)"
+                        (keydown)="handleCommentKeydown($event, complaint)"
+                        placeholder="Add context for approval or rejection (optional)."
+                      ></textarea>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 transition hover:text-slate-200"
+                        (click)="toggleComments(complaint.id)"
+                        [attr.aria-expanded]="areCommentsOpen(complaint.id)"
+                        [attr.aria-controls]="'complaint-comments-' + complaint.id"
+                      >
+                        <span
+                          class="inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-700 text-[10px]"
+                          aria-hidden="true"
+                        >
+                          {{ areCommentsOpen(complaint.id) ? '−' : '+' }}
+                        </span>
+                        Comments ({{ commentsCount(complaint) }})
+                      </button>
+                    </div>
+                    @if (areCommentsOpen(complaint.id)) {
+                      <div
+                        class="space-y-2 rounded-xl border border-slate-800 bg-slate-950/60 p-3"
+                        [attr.id]="'complaint-comments-' + complaint.id"
+                      >
+                        @if (commentsCount(complaint) === 0) {
+                          <p class="text-xs text-slate-400">No comments yet.</p>
+                        } @else {
+                          <div class="space-y-2">
+                            @for (
+                              comment of complaint.comments ?? [];
+                              track comment.id ?? comment.content
+                            ) {
+                              <div class="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+                                <div
+                                  class="flex flex-wrap items-center gap-2 text-[11px] text-slate-400"
+                                >
+                                  <span>{{ comment.createdAt | date: 'medium' }}</span>
+                                </div>
+                                <p class="mt-2 text-sm text-slate-100">{{ comment.content }}</p>
+                              </div>
+                            }
+                          </div>
+                        }
+                      </div>
+                    }
                   </div>
                 </article>
               }

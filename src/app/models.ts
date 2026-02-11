@@ -38,6 +38,14 @@ export interface Complaint {
   status: ComplaintStatus;
   createdAt: string;
   userId: string;
+  comments?: ComplaintComment[];
+}
+
+export interface ComplaintComment {
+  id?: string;
+  adminId: string;
+  content: string;
+  createdAt: string;
 }
 
 export interface CreateComplaintRequest {
@@ -45,5 +53,6 @@ export interface CreateComplaintRequest {
 }
 
 export interface UpdateComplaintRequest {
-  status: 'approved' | 'rejected';
+  status: ComplaintStatus;
+  comment?: string;
 }

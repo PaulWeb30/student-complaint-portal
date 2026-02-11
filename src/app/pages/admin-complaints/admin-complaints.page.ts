@@ -48,6 +48,8 @@ export class AdminComplaintsPage implements OnInit {
   readonly busyIds = signal<string[]>([]);
   readonly deleteBusyIds = signal<string[]>([]);
   readonly pendingDelete = signal<Complaint | null>(null);
+  readonly commentDrafts = signal<Record<string, string>>({});
+  readonly commentsOpen = signal<Record<string, boolean>>({});
 
   constructor() {
     effect(() => {
@@ -107,8 +109,11 @@ export class AdminComplaintsPage implements OnInit {
     this.actionError.set(null);
     this.busyIds.update((ids) => [...ids, complaint.id]);
 
+    const comment = this.commentDraft(complaint.id).trim();
+    const payload = comment ? { status, comment } : { status };
+
     this.complaintService
-      .updateComplaint(complaint.id, { status })
+      .updateComplaint(complaint.id, payload)
       .pipe(
         finalize(() => {
           this.busyIds.update((ids) => ids.filter((id) => id !== complaint.id));
@@ -116,15 +121,55 @@ export class AdminComplaintsPage implements OnInit {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: () => {
+        next: (updated) => {
           this.complaints.update((items) =>
-            items.map((item) => (item.id === complaint.id ? { ...item, status } : item)),
+            items.map((item) => (item.id === complaint.id ? updated : item)),
           );
+          this.clearCommentDraft(complaint.id);
+          this.loadComplaints();
         },
         error: (err: Error) => {
           this.actionError.set(err.message || 'Update failed.');
         },
       });
+  }
+
+  submitComment(complaint: Complaint): void {
+    const comment = this.commentDraft(complaint.id).trim();
+    if (!comment || this.isBusy(complaint.id)) {
+      return;
+    }
+
+    this.actionError.set(null);
+    this.busyIds.update((ids) => [...ids, complaint.id]);
+
+    this.complaintService
+      .updateComplaint(complaint.id, { status: complaint.status, comment })
+      .pipe(
+        finalize(() => {
+          this.busyIds.update((ids) => ids.filter((id) => id !== complaint.id));
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (updated) => {
+          this.complaints.update((items) =>
+            items.map((item) => (item.id === complaint.id ? updated : item)),
+          );
+          this.clearCommentDraft(complaint.id);
+          this.loadComplaints();
+        },
+        error: (err: Error) => {
+          this.actionError.set(err.message || 'Comment failed.');
+        },
+      });
+  }
+
+  handleCommentKeydown(event: KeyboardEvent, complaint: Complaint): void {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.submitComment(complaint);
+    }
   }
 
   requestDelete(complaint: Complaint): void {
@@ -173,6 +218,34 @@ export class AdminComplaintsPage implements OnInit {
 
   isBusy(id: string): boolean {
     return this.busyIds().includes(id);
+  }
+
+  commentDraft(id: string): string {
+    return this.commentDrafts()[id] ?? '';
+  }
+
+  setCommentDraft(id: string, value: string): void {
+    this.commentDrafts.update((drafts) => ({ ...drafts, [id]: value }));
+  }
+
+  clearCommentDraft(id: string): void {
+    this.commentDrafts.update((drafts) => {
+      const next = { ...drafts };
+      delete next[id];
+      return next;
+    });
+  }
+
+  toggleComments(id: string): void {
+    this.commentsOpen.update((state) => ({ ...state, [id]: !state[id] }));
+  }
+
+  areCommentsOpen(id: string): boolean {
+    return !!this.commentsOpen()[id];
+  }
+
+  commentsCount(complaint: Complaint): number {
+    return complaint.comments?.length ?? 0;
   }
 
   statusClass(status: Complaint['status']): string {

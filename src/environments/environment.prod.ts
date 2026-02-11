@@ -1,4 +1,5 @@
 export const environment = {
   production: true,
-  apiBaseUrl: 'http://localhost:3000/api',
+  // todo change to the Azure web app URL when deployed
+  apiBaseUrl: 'http://localhost:8080/api',
 };
